@@ -174,7 +174,7 @@ mavenPublishing {
         name = "Pixko"
         description = "An api accesser for pixiv writed by kotlin "
         inceptionYear = "2024"
-        url = "https://github.com/kagg886/Pixko/"
+        url = "https://github.com/magic-cucumber/Pixko/"
         licenses {
             license {
                 name = "The Apache License, Version 2.0"
@@ -186,7 +186,7 @@ mavenPublishing {
             developer {
                 id = "kagg886"
                 name = "kagg886"
-                url = "https://github.com/kagg886/"
+                url = "https://github.com/magic-cucumber/"
             }
 
             developer {
@@ -196,9 +196,9 @@ mavenPublishing {
             }
         }
         scm {
-            url = "https://github.com/kagg886/Pixko/"
-            connection = "scm:git:git://github.com/kagg886/Pixko.git"
-            developerConnection = "scm:git:ssh://git@github.com/kagg886/Pixko.git"
+            url = "https://github.com/magic-cucumber/Pixko/"
+            connection = "scm:git:git://github.com/magic-cucumber/Pixko.git"
+            developerConnection = "scm:git:ssh://git@github.com/magic-cucumber/Pixko.git"
         }
     }
 }
