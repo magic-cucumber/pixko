@@ -37,7 +37,6 @@ kotlin {
 
     androidTarget { publishLibraryVariants("release") }
     jvm()
-    iosX64()
     iosArm64()
     iosSimulatorArm64()
 
