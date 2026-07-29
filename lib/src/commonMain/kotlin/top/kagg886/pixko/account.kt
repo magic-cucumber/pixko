@@ -25,8 +25,8 @@ enum class TokenType {
  * @see InMemoryTokenStorage
  */
 interface TokenStorage {
-    fun getToken(type: TokenType): String?
-    fun setToken(type: TokenType, token: String)
+    suspend fun getToken(type: TokenType): String?
+    suspend fun setToken(type: TokenType, token: String)
 }
 
 /**
@@ -34,9 +34,9 @@ interface TokenStorage {
  */
 class InMemoryTokenStorage : TokenStorage {
     private val map = mutableMapOf<TokenType, String>()
-    override fun getToken(type: TokenType): String? = map[type]
+    override suspend fun getToken(type: TokenType): String? = map[type]
 
-    override fun setToken(type: TokenType, token: String) {
+    override suspend fun setToken(type: TokenType, token: String) {
         map[type] = token
     }
 }
