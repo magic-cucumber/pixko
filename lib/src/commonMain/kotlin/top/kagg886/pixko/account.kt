@@ -17,7 +17,7 @@ import kotlin.collections.set
  * @property REFRESH
  */
 enum class TokenType {
-    ACCESS, REFRESH
+    ACCESS, REFRESH,EXPIRE_TIME
 }
 
 /**

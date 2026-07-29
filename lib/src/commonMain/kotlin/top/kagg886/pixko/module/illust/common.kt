@@ -142,11 +142,16 @@ data class Illust(
      * 插画若被限制，可调用此字段获取限制原因
      */
     val limitLevel: LimitLevel by lazy {
-        when (imageUrls.content) {
-            "https://s.pximg.net/common/images/limit_r18_360.png" -> LIMIT_R18
-            "https://s.pximg.net/common/images/limit_r18g_360.png" -> LIMIT_R18G
-            "https://s.pximg.net/common/images/limit_sanity_level_360.png" -> LIMIT_R15
-            "https://s.pximg.net/common/images/limit_unknown_360.png" -> LIMIT_PRIVACY
+        val token = "https://s.pximg.net/common/images/limit_"
+        val level = imageUrls.content.takeIf { it.startsWith(token) }?.substring(token.length) ?: return@lazy NONE
+
+        when {
+            level.startsWith("r18g_") -> LIMIT_R18G
+            level.startsWith("r18_") -> LIMIT_R18
+            level.startsWith("mypixiv_") -> LIMIT_PRIVACY
+            level.startsWith("sanity_level_") -> LIMIT_R15
+            level.startsWith("unviewable_") -> LIMIT_UNKNOWN
+            level.startsWith("unknown_") -> LIMIT_UNKNOWN
             else -> NONE
         }
     }
@@ -165,9 +170,10 @@ data class Illust(
      * @property LIMIT_R18 R18插画
      * @property LIMIT_R18G R18G插画
      * @property LIMIT_PRIVACY 无权限访问插画
+     * @property LIMIT_UNKNOWN 未知原因无法查看的插画
      */
     enum class LimitLevel {
-        NONE, LIMIT_R15, LIMIT_R18, LIMIT_R18G, LIMIT_PRIVACY
+        NONE, LIMIT_R15, LIMIT_R18, LIMIT_R18G, LIMIT_PRIVACY, LIMIT_UNKNOWN
     }
 }
 
