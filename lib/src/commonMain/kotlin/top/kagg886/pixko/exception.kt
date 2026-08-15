@@ -21,4 +21,5 @@ data class PixivException(
     }
 }
 
-class InvaidRefreshTokenException : Exception()
+class InvalidRefreshTokenException(override val message: String? = null, override val cause: Throwable? = null) :
+    Exception(message = message, cause = cause)

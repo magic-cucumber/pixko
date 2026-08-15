@@ -10,17 +10,22 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import okio.ByteString.Companion.toByteString
 import top.kagg886.pixko.PixivAccountFactory.newAccount
 import top.kagg886.pixko.PixivAccountFactory.newAccountFromConfig
 import top.kagg886.pixko.internal.json
+import top.kagg886.pixko.module.user.SimpleMeProfile
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.random.Random
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 
 //从APK中提取，不解释
@@ -160,9 +165,19 @@ class PixivVerification<T : HttpClientEngineConfig>(
             json["access_token"]?.jsonPrimitive?.content ?: throw IllegalArgumentException("access_token is null")
         val refreshToken =
             json["refresh_token"]?.jsonPrimitive?.content ?: throw IllegalArgumentException("refresh_token is null")
+        val expiresIn = json["expires_in"]?.jsonPrimitive?.longOrNull
+            ?: throw InvalidRefreshTokenException("expire time not found")
+
+        val user = try {
+            Json.decodeFromJsonElement<SimpleMeProfile>(json["user"]?.jsonObject ?: throw InvalidRefreshTokenException("user struct not found"))
+        } catch (e: Throwable) {
+            throw InvalidRefreshTokenException("user struct decode failed",e)
+        }
 
         config.storage.setToken(TokenType.ACCESS, accessToken)
         config.storage.setToken(TokenType.REFRESH, refreshToken)
+        config.storage.setExpireTime(Clock.System.now().plus(expiresIn.seconds).toEpochMilliseconds())
+        config.storage.setProfile(user)
 
         return InternalPixivAccount(config)
     }

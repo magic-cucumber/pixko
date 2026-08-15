@@ -7,11 +7,14 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.utils.io.*
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import top.kagg886.pixko.*
+import top.kagg886.pixko.module.user.SimpleMeProfile
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
@@ -23,7 +26,7 @@ class TokenAutoRefreshPluginV2Config {
 }
 
 
-@OptIn(InternalAPI::class, ExperimentalTime::class)
+@OptIn(InternalAPI::class)
 val TokenAutoRefreshPluginV2 = createClientPlugin("TokenAutoRefreshPluginV2", ::TokenAutoRefreshPluginV2Config) {
     val storage = pluginConfig.storage
 
@@ -38,7 +41,7 @@ val TokenAutoRefreshPluginV2 = createClientPlugin("TokenAutoRefreshPluginV2", ::
             return@on proceed(originalRequest)
         }
 
-        val expire = storage.getToken(TokenType.EXPIRE_TIME)?.toLongOrNull()?.let { Instant.fromEpochMilliseconds(it) }
+        val expire = storage.getExpireTime()?.let { Instant.fromEpochMilliseconds(it) }
         val tokenHasExpired = expire?.let { Clock.System.now() >= it } ?: false
 
         if (!tokenHasExpired) {
@@ -62,7 +65,7 @@ val TokenAutoRefreshPluginV2 = createClientPlugin("TokenAutoRefreshPluginV2", ::
 
 
 
-        val refreshToken = storage.getToken(TokenType.REFRESH) ?: throw InvaidRefreshTokenException()
+        val refreshToken = storage.getToken(TokenType.REFRESH) ?: throw InvalidRefreshTokenException()
         val resp = client.post("https://oauth.secure.pixiv.net/auth/token") {
             contentType(ContentType.Application.FormUrlEncoded)
             setBody(
@@ -82,18 +85,22 @@ val TokenAutoRefreshPluginV2 = createClientPlugin("TokenAutoRefreshPluginV2", ::
         val json = refreshResponse["response"]?.jsonObject ?: refreshResponse
 
         val accessToken = json["access_token"]?.jsonPrimitive?.content
-            ?: throw InvaidRefreshTokenException()
+            ?: throw InvalidRefreshTokenException("access token not found")
         val newRefreshToken = json["refresh_token"]?.jsonPrimitive?.content
-            ?: throw InvaidRefreshTokenException()
+            ?: throw InvalidRefreshTokenException("refresh token not found")
         val expiresIn = json["expires_in"]?.jsonPrimitive?.longOrNull
-            ?: throw InvaidRefreshTokenException()
+            ?: throw InvalidRefreshTokenException("expire time not found")
+
+        val user = try {
+            Json.decodeFromJsonElement<SimpleMeProfile>(json["user"]?.jsonObject ?: throw InvalidRefreshTokenException("user struct not found"))
+        } catch (e: Throwable) {
+            throw InvalidRefreshTokenException("user struct decode failed",e)
+        }
 
         storage.setToken(TokenType.ACCESS, accessToken)
         storage.setToken(TokenType.REFRESH, newRefreshToken)
-        storage.setToken(
-            TokenType.EXPIRE_TIME,
-            Clock.System.now().plus(expiresIn.seconds).toEpochMilliseconds().toString()
-        )
+        storage.setExpireTime(Clock.System.now().plus(expiresIn.seconds).toEpochMilliseconds())
+        storage.setProfile(user)
 
         val newRequest = HttpRequestBuilder().takeFromWithExecutionContext(originalRequest).apply {
             headers["Authorization"] = "Bearer $accessToken"

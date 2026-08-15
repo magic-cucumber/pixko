@@ -6,10 +6,8 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
-import top.kagg886.pixko.TokenType.ACCESS
-import top.kagg886.pixko.TokenType.REFRESH
 import top.kagg886.pixko.internal.TokenAutoRefreshPluginV2
-import kotlin.collections.set
+import top.kagg886.pixko.module.user.SimpleMeProfile
 
 /**
  * # Token类型
@@ -17,7 +15,7 @@ import kotlin.collections.set
  * @property REFRESH
  */
 enum class TokenType {
-    ACCESS, REFRESH,EXPIRE_TIME
+    ACCESS, REFRESH
 }
 
 /**
@@ -27,17 +25,35 @@ enum class TokenType {
 interface TokenStorage {
     suspend fun getToken(type: TokenType): String?
     suspend fun setToken(type: TokenType, token: String)
+
+    suspend fun getExpireTime(): Long?
+    suspend fun setExpireTime(expire: Long?)
+
+    suspend fun getProfile(): SimpleMeProfile?
+    suspend fun setProfile(profile: SimpleMeProfile)
 }
 
 /**
  * # 将token存入内存的Token存储器
  */
 class InMemoryTokenStorage : TokenStorage {
-    private val map = mutableMapOf<TokenType, String>()
-    override suspend fun getToken(type: TokenType): String? = map[type]
+    internal val map = mutableMapOf<TokenType, String>()
+    private var expireTime: Long? = null
+    private var profile: SimpleMeProfile? = null
 
+    override suspend fun getToken(type: TokenType): String? = map[type]
     override suspend fun setToken(type: TokenType, token: String) {
         map[type] = token
+    }
+
+    override suspend fun getExpireTime(): Long? = expireTime
+    override suspend fun setExpireTime(expire: Long?) {
+        this.expireTime = expire
+    }
+
+    override suspend fun getProfile(): SimpleMeProfile? = profile
+    override suspend fun setProfile(profile: SimpleMeProfile) {
+        this.profile = profile
     }
 }
 
@@ -57,6 +73,7 @@ class PixivAccountConfig<Engine : HttpClientEngineConfig>(val engine: HttpClient
 
 
 typealias PixivAccount = InternalPixivAccount<*>
+
 /**
  * # PixivAPP Client
  * 内部仅包含程序的核心部分，api定义在[top.kagg886.pixko.module]中
@@ -66,6 +83,7 @@ typealias PixivAccount = InternalPixivAccount<*>
 class InternalPixivAccount<Engine : HttpClientEngineConfig> internal constructor(
     private val config: PixivAccountConfig<Engine>
 ) : AutoCloseable {
+    internal val storage = config.storage
 
     internal val client = HttpClient(config.engine) {
         config.config(this)
@@ -76,7 +94,7 @@ class InternalPixivAccount<Engine : HttpClientEngineConfig> internal constructor
 
 
         install(TokenAutoRefreshPluginV2) {
-            storage = config.storage
+            this.storage = this@InternalPixivAccount.storage
         }
 
         install(HttpTimeout) {

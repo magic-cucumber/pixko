@@ -41,7 +41,9 @@ suspend fun PixivAccount.searchNovel(
     ) {
         "searchTarget must be EXACT_MATCH_FOR_TAGS,PARTIAL_MATCH_FOR_TAGS,TEXT,KEYWORD"
     }
-    val userInfo = getCurrentUserSimpleProfile()
+    val userInfo = this.storage.getProfile() ?: getCurrentUserSimpleProfile().apply {
+        storage.setProfile(this)
+    }
     if (!userInfo.isPremium && sort == POPULAR_DESC) {
         if (page != 1) {
             return emptyList()

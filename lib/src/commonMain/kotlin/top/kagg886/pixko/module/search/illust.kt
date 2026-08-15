@@ -69,7 +69,9 @@ suspend fun PixivAccount.searchIllust(
     check(searchTarget in listOf(EXACT_MATCH_FOR_TAGS, PARTIAL_MATCH_FOR_TAGS, TITLE_AND_CAPTION)) {
         "searchTarget must be EXACT_MATCH_FOR_TAGS, PARTIAL_MATCH_FOR_TAGS or TITLE_AND_CAPTION"
     }
-    val userInfo = getCurrentUserSimpleProfile()
+    val userInfo = this.storage.getProfile() ?: getCurrentUserSimpleProfile().apply {
+        storage.setProfile(this)
+    }
     if (!userInfo.isPremium && sort == POPULAR_DESC) {
         if (page != 1) {
             return emptyList()

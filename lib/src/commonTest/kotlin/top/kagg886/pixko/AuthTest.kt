@@ -1,6 +1,5 @@
 package top.kagg886.pixko
 
-import io.ktor.client.plugins.logging.DEFAULT
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
@@ -43,11 +42,11 @@ class AuthTest {
             }
 
             storage = InMemoryTokenStorage().apply {
-                setToken(TokenType.ACCESS, "awa")
-                setToken(TokenType.REFRESH, "qwq")
+                map[TokenType.ACCESS] = "awa"
+                map[TokenType.REFRESH] = "qwq"
             }
         }
-        assertFailsWith(InvaidRefreshTokenException::class) {
+        assertFailsWith(InvalidRefreshTokenException::class) {
             client.getRecommendIllust()
         }
     }
@@ -56,7 +55,19 @@ class AuthTest {
         fun generatePixivAccount() =
             TestPixivAccountFactory.newAccountFromConfig {
                 storage = InMemoryTokenStorage().apply {
-                    setToken(TokenType.REFRESH, "xtkew_VEEQOxOW2xUeNE_Y8cX1g--Fhw9CtBAC6BVPQ")
+                    map[TokenType.REFRESH] = "xtkew_VEEQOxOW2xUeNE_Y8cX1g--Fhw9CtBAC6BVPQ"
+                }
+
+                config = {
+                    install(Logging) {
+                        logger = object : Logger {
+                            override fun log(message: String) {
+                                println(message)
+                            }
+                        }
+
+                        level = LogLevel.BODY
+                    }
                 }
             }
     }
