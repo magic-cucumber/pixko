@@ -19,6 +19,7 @@ import kotlinx.serialization.json.longOrNull
 import okio.ByteString.Companion.toByteString
 import top.kagg886.pixko.PixivAccountFactory.newAccount
 import top.kagg886.pixko.PixivAccountFactory.newAccountFromConfig
+import top.kagg886.pixko.internal.TokenRefreshAccountInfo
 import top.kagg886.pixko.internal.json
 import top.kagg886.pixko.module.user.SimpleMeProfile
 import kotlin.io.encoding.Base64
@@ -169,7 +170,7 @@ class PixivVerification<T : HttpClientEngineConfig>(
             ?: throw InvalidRefreshTokenException("expire time not found")
 
         val user = try {
-            Json.decodeFromJsonElement<SimpleMeProfile>(json["user"]?.jsonObject ?: throw InvalidRefreshTokenException("user struct not found"))
+            Json.decodeFromJsonElement<TokenRefreshAccountInfo>(json["user"]?.jsonObject ?: throw InvalidRefreshTokenException("user struct not found"))
         } catch (e: Throwable) {
             throw InvalidRefreshTokenException("user struct decode failed",e)
         }
@@ -177,7 +178,16 @@ class PixivVerification<T : HttpClientEngineConfig>(
         config.storage.setToken(TokenType.ACCESS, accessToken)
         config.storage.setToken(TokenType.REFRESH, refreshToken)
         config.storage.setExpireTime(Clock.System.now().plus(expiresIn.seconds).toEpochMilliseconds())
-        config.storage.setProfile(user)
+        config.storage.setProfile(
+            SimpleMeProfile(
+                userId = user.id.toInt(),
+                pixivId = user.account,
+                name = user.name,
+                isPremium = user.isPremium,
+                xRestrict = user.xRestrict,
+                profileImageUrls = ImageUrls(medium = user.profileImageUrls.px170x170)
+            )
+        )
 
         return InternalPixivAccount(config)
     }

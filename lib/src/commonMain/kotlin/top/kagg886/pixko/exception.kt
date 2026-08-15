@@ -22,4 +22,4 @@ data class PixivException(
 }
 
 class InvalidRefreshTokenException(override val message: String? = null, override val cause: Throwable? = null) :
-    Exception(message = message, cause = cause)
+    Exception(message,cause)

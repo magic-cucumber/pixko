@@ -92,7 +92,7 @@ val TokenAutoRefreshPluginV2 = createClientPlugin("TokenAutoRefreshPluginV2", ::
             ?: throw InvalidRefreshTokenException("expire time not found")
 
         val user = try {
-            Json.decodeFromJsonElement<SimpleMeProfile>(json["user"]?.jsonObject ?: throw InvalidRefreshTokenException("user struct not found"))
+            Json.decodeFromJsonElement<TokenRefreshAccountInfo>(json["user"]?.jsonObject ?: throw InvalidRefreshTokenException("user struct not found"))
         } catch (e: Throwable) {
             throw InvalidRefreshTokenException("user struct decode failed",e)
         }
@@ -100,7 +100,16 @@ val TokenAutoRefreshPluginV2 = createClientPlugin("TokenAutoRefreshPluginV2", ::
         storage.setToken(TokenType.ACCESS, accessToken)
         storage.setToken(TokenType.REFRESH, newRefreshToken)
         storage.setExpireTime(Clock.System.now().plus(expiresIn.seconds).toEpochMilliseconds())
-        storage.setProfile(user)
+        storage.setProfile(
+            SimpleMeProfile(
+                userId = user.id.toInt(),
+                pixivId = user.account,
+                name = user.name,
+                isPremium = user.isPremium,
+                xRestrict = user.xRestrict,
+                profileImageUrls = ImageUrls(medium = user.profileImageUrls.px170x170)
+            )
+        )
 
         val newRequest = HttpRequestBuilder().takeFromWithExecutionContext(originalRequest).apply {
             headers["Authorization"] = "Bearer $accessToken"
